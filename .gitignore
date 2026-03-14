@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 .env
+login.com.json
 googlecon.json
 
 # Editor directories and files
