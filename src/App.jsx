@@ -25,12 +25,16 @@ import {
   RefreshCw,
   Clock
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Papa from 'papaparse';
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import { groqService } from './services/groq';
 import { geminiService } from './services/gemini';
 import GroqService from './services/groq';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
+import piexif from 'piexifjs';
 import './App.css';
 
 const providerModels = {
@@ -436,6 +440,59 @@ const CustomSelect = ({ value, onChange, options }) => {
   );
 };
 
+const LiquidProgressBar = ({ progress }) => {
+  const getProgressColor = () => {
+    if (progress <= 0) return '#EC1C24';
+    if (progress >= 100) return '#10b981';
+    
+    // Smooth HSL-like transition for more premium feel
+    if (progress < 50) {
+      const ratio = progress / 50;
+      const r = Math.round(236 * (1 - ratio) + 59 * ratio);
+      const g = Math.round(28 * (1 - ratio) + 130 * ratio);
+      const b = Math.round(36 * (1 - ratio) + 246 * ratio);
+      return `rgb(${r}, ${g}, ${b})`;
+    } else {
+      const ratio = (progress - 50) / 50;
+      const r = Math.round(59 * (1 - ratio) + 16 * ratio);
+      const g = Math.round(130 * (1 - ratio) + 185 * ratio);
+      const b = Math.round(246 * (1 - ratio) + 129 * ratio);
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+  };
+
+  const color = getProgressColor();
+
+  return (
+    <div className="progress-container">
+      <div className="glass-shine" />
+      <motion.div 
+        className="liquid-progress-bar" 
+        initial={{ width: 0 }}
+        animate={{ width: `${progress}%` }}
+        transition={{ type: 'spring', stiffness: 50, damping: 15 }}
+        style={{ color: color }}
+      >
+        <div className="liquid-fill" style={{ backgroundColor: color }} />
+        <AnimatePresence>
+          {progress > 0 && progress < 100 && (
+            <motion.div 
+              className="liquid-wave-wrapper"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+               <div className="liquid-wave" style={{ backgroundColor: color, filter: 'brightness(1.2)' }} />
+               <div className="liquid-wave" style={{ backgroundColor: color, filter: 'brightness(1.1)', animationDelay: '1s' }} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+      <div className="progress-text">{Math.round(progress)}%</div>
+    </div>
+  );
+};
+
 const App = () => {
   const [images, setImages] = useState([]);
   const [apiKeys, setApiKeys] = useState(() => {
@@ -485,7 +542,9 @@ const App = () => {
   const [keywordCount, setKeywordCount] = useState([10, 50]);
   const [isSingleKeyword, setIsSingleKeyword] = useState(false);
   const [selectedModel, setSelectedModel] = useState("meta-llama/llama-4-scout-17b-16e-instruct");
-  const [promptLen, setPromptLen] = useState([400, 600]);
+  const [promptLen, setPromptLen] = useState([580, 620]);
+  const [currentProgress, setCurrentProgress] = useState(0); 
+  const [isDragging, setIsDragging] = useState(false);
 
   // Prefix & Suffix Settings
   const [prefixEnabled, setPrefixEnabled] = useState(false);
@@ -506,8 +565,8 @@ const App = () => {
   }, [apiKeys, activeProvider, selectedModel]);
 
   const handleFileUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const newImages = files.map(file => ({
+    const files = e.target.files ? Array.from(e.target.files) : Array.from(e.dataTransfer.files);
+    const newImages = files.filter(f => f.type.startsWith('image/')).map(file => ({
       id: Math.random().toString(36).substr(2, 9),
       file,
       preview: URL.createObjectURL(file),
@@ -645,10 +704,13 @@ const App = () => {
             model: selectedModel,
             promptLen
           });
+          
+          const sanitizedResult = service.sanitizePrompt ? service.sanitizePrompt(result) : result;
+
           setImages(prev => prev.map(i => i.id === img.id ? { 
             ...i, 
             status: 'done', 
-            promptOutput: result 
+            promptOutput: sanitizedResult 
           } : i));
         }
     } catch (error) {
@@ -668,8 +730,12 @@ const App = () => {
     }
 
     setIsGenerating(true);
+    setCurrentProgress(0); // Reset progress
     const pendingImages = images.filter(img => img.status !== 'done');
     setStats({ total: pendingImages.length, completed: 0 });
+    
+    // Initial progress setup
+    setCurrentProgress(0.1); 
 
     const service = activeProvider === 'groq' ? groqService : geminiService;
 
@@ -756,18 +822,27 @@ const App = () => {
             model: selectedModel,
             promptLen
           });
+          
+          const sanitizedResult = service.sanitizePrompt ? service.sanitizePrompt(result) : result;
+
           setImages(prev => prev.map(i => i.id === img.id ? { 
             ...i, 
             status: 'done', 
-            promptOutput: result 
+            promptOutput: sanitizedResult 
           } : i));
         }
         
+         // Bulletproof sync: ensure progress state is updated before any delay or iteration
+        const percentage = ((pendingImages.indexOf(img) + 1) / pendingImages.length) * 100;
+        setCurrentProgress(percentage);
         setStats(prev => ({ ...prev, completed: prev.completed + 1 }));
 
         if (pendingImages.indexOf(img) < pendingImages.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 3000));
         }
+
+        // Each completed item updates the progress
+        setCurrentProgress(((pendingImages.indexOf(img) + 1) / pendingImages.length) * 100);
 
       } catch (error) {
         setImages(prev => prev.map(i => i.id === img.id ? { 
@@ -833,6 +908,156 @@ const App = () => {
     } catch (err) {
       console.error("Export failed:", err);
       alert("Failed to export CSV. Please check browser console.");
+    }
+  };
+
+  const handleEmbeddedDownload = async () => {
+    const processedImages = images.filter(img => img.status === 'done');
+    if (processedImages.length === 0) {
+      alert("No processed images to embed.");
+      return;
+    }
+
+    const zip = new JSZip();
+
+    // Helper to encode string to Little-Endian UCS2 (UTF-16LE) byte array with null terminator
+    const encodeUCS2 = (str) => {
+      const result = [];
+      for (let i = 0; i < str.length; i++) {
+        const charCode = str.charCodeAt(i);
+        result.push(charCode & 0xFF);
+        result.push((charCode >> 8) & 0xFF);
+      }
+      result.push(0, 0); // Null terminator
+      return result;
+    };
+
+    // Helper to inject segment after SOI or specified markers
+    const injectSegment = (data, marker, payload) => {
+      // payload should include segment header (marker, length, etc)
+      const res = new Uint8Array(data.length + payload.length);
+      // SOI is always 0xFFD8
+      res.set(data.subarray(0, 2), 0);
+      res.set(payload, 2);
+      res.set(data.subarray(2), 2 + payload.length);
+      return res;
+    };
+
+    for (const img of processedImages) {
+      try {
+        const file = img.file;
+        const metadata = img.metadata;
+        
+        if (!metadata && activeMode === 'metadata') {
+           zip.file(file.name, file);
+           continue;
+        }
+        
+        const title = metadata?.title || img.promptOutput || "";
+        const description = metadata?.description || "";
+        const keywords = metadata?.keywords || [];
+        const keywordStr = keywords.join('; ');
+        const author = user?.name || "GFX Metadata";
+
+        // Only embed if it's JPEG/JPG
+        if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+          const reader = new FileReader();
+          const base64Promise = new Promise((resolve) => {
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
+          });
+          
+          let base64 = await base64Promise;
+          
+          try {
+            // 1. Prepare EXIF with piexif
+            const exifObj = piexif.load(base64);
+            
+            // 0th IFD - Windows Specific XP Tags
+            exifObj["0th"][40091] = encodeUCS2(title);       // XPTitle -> Title
+            exifObj["0th"][40094] = encodeUCS2(keywordStr);  // XPKeywords -> Tags
+            exifObj["0th"][40092] = encodeUCS2(description); // XPComment -> Comments
+            exifObj["0th"][40093] = encodeUCS2(author);      // XPAuthor -> Authors
+            exifObj["0th"][40095] = encodeUCS2(title);       // XPSubject -> Subject
+            
+            // Standard Tags
+            exifObj["0th"][piexif.ImageIFD.ImageDescription] = title;
+            exifObj["0th"][piexif.ImageIFD.Artist] = author;
+            exifObj["0th"][piexif.ImageIFD.Software] = "GFX Metadata Generator";
+            
+            // Exif IFD
+            exifObj["Exif"][piexif.ExifIFD.UserComment] = piexif.helper.encode_utf8(description);
+            
+            const exifBytes = piexif.dump(exifObj);
+            base64 = piexif.insert(exifBytes, base64);
+
+            // 2. Prepare XMP packet
+            const xmpTemplate = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c140 79.160451, 2017/05/06-01:08:21"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/"><dc:format>image/jpeg</dc:format><dc:title><rdf:Alt><rdf:li xml:lang="x-default">${title.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</rdf:li></rdf:Alt></dc:title><dc:description><rdf:Alt><rdf:li xml:lang="x-default">${description.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</rdf:li></rdf:Alt></dc:description><dc:subject><rdf:Bag>${keywords.map(kw => `<rdf:li>${kw.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</rdf:li>`).join('')}</rdf:Bag></dc:subject><dc:creator><rdf:Seq><rdf:li>${author}</rdf:li></rdf:Seq></dc:creator><photoshop:Headline>${title.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</photoshop:Headline><photoshop:CaptionWriter>GFX Metadata</photoshop:CaptionWriter><xmp:CreatorTool>GFX Metadata Generator</xmp:CreatorTool><xmp:CreateDate>${new Date().toISOString()}</xmp:CreateDate></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`.trim();
+
+            // 3. Manual Injection to ensure order: EXIF then XMP
+            const raw = atob(base64.split(',')[1]);
+            let data = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; i++) data[i] = raw.charCodeAt(i);
+
+            // XMP Header
+            const xmpHeader = "http://ns.adobe.com/xap/1.0/\0";
+            const xmpBytes = new TextEncoder().encode(xmpHeader + xmpTemplate);
+            const segmentLength = xmpBytes.length + 2;
+            
+            const xmpSegment = new Uint8Array(2 + segmentLength);
+            xmpSegment[0] = 0xFF;
+            xmpSegment[1] = 0xE1; 
+            xmpSegment[2] = (segmentLength >> 8) & 0xFF;
+            xmpSegment[3] = segmentLength & 0xFF;
+            xmpSegment.set(xmpBytes, 4);
+
+            // Find where EXIF ends (usually the first segment after SOI)
+            let offset = 2; // skip SOI
+            if (data[offset] === 0xFF && data[offset+1] === 0xE1) {
+              const exifLen = (data[offset+2] << 8) + data[offset+3];
+              offset += 2 + exifLen;
+            }
+
+            const result = new Uint8Array(data.length + xmpSegment.length);
+            result.set(data.subarray(0, offset), 0);
+            result.set(xmpSegment, offset);
+            result.set(data.subarray(offset), offset + xmpSegment.length);
+            
+            zip.file(file.name, result);
+          } catch (e) {
+            console.error("Embedding process error:", e);
+            zip.file(file.name, file);
+          }
+        } else {
+          zip.file(file.name, file);
+        }
+      } catch (err) {
+        console.error("Embedding failed for", img.file.name, err);
+      }
+    }
+
+    try {
+      const content = await zip.generateAsync({ 
+        type: "blob",
+        mimeType: "application/zip",
+        compression: "STORE"
+      });
+      
+      const url = URL.createObjectURL(content);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = "GFX_Embedded_Metadata.zip";
+      document.body.appendChild(link);
+      link.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+      
+    } catch (zipErr) {
+      console.error("ZIP Generation failed:", zipErr);
+      alert("Failed to generate ZIP file.");
     }
   };
 
@@ -1086,6 +1311,14 @@ const App = () => {
             </button>
             <button 
                 className="secondary" 
+                onClick={handleEmbeddedDownload}
+                disabled={!images.some(img => img.status === 'done')}
+                style={{ borderColor: 'var(--text-secondary)' }}
+            >
+              <ImageIcon size={18} /> Embedded Metadata
+            </button>
+            <button 
+                className="secondary" 
                 onClick={exportCsv}
                 disabled={!images.some(img => img.status === 'done')}
             >
@@ -1095,7 +1328,13 @@ const App = () => {
         </header>
 
         {images.length === 0 ? (
-          <label className="upload-zone" style={{ borderStyle: 'dotted', background: 'transparent' }}>
+          <label 
+            className={`upload-zone ${isDragging ? 'drag-active' : ''}`} 
+            style={{ borderStyle: 'dotted', background: 'transparent' }}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileUpload(e); }}
+          >
             <input type="file" multiple accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
             <div style={{ background: 'rgba(236, 28, 36, 0.1)', padding: '2rem', borderRadius: '50%', marginBottom: '1rem' }}>
               <Upload size={48} color="#EC1C24" />
@@ -1105,6 +1344,7 @@ const App = () => {
           </label>
         ) : (
           <div className="image-grid">
+            {images.length > 0 && <LiquidProgressBar progress={currentProgress} />}
             {images.map(img => (
               <div key={img.id} className="card-horizontal">
                 {/* Left: Image Section */}

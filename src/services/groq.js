@@ -100,7 +100,9 @@ Guidelines:
         const prompt = `Analyze this image and provide a highly detailed, creative, and descriptive manual prompt that could be used to recreate this image. 
 Focus on style, lighting, composition, and subject details. 
 
-STRICT REQUIREMENT: The output prompt MUST be between ${promptLen[0]} and ${promptLen[1]} characters long.
+STRICT REQUIREMENT: The output prompt MUST be raw text only. 
+DO NOT use JSON, brackets, or any structured format like [ { "prompt": "" } ].
+The output MUST be between ${promptLen[0]} and ${promptLen[1]} characters long (aim for approximately 600 characters).
 
 Output ONLY the prompt text.`;
 
@@ -135,6 +137,26 @@ Output ONLY the prompt text.`;
   }
 
   // Retry logic for fallback
+
+  sanitizePrompt(text) {
+    if (!text) return "";
+    let cleaned = text.trim();
+    
+    try {
+      if (cleaned.startsWith('[') || cleaned.startsWith('{')) {
+        const parsed = JSON.parse(cleaned);
+        if (Array.isArray(parsed) && parsed[0]?.prompt) return parsed[0].prompt;
+        if (parsed.prompt) return parsed.prompt;
+      }
+    } catch (e) {}
+
+    cleaned = cleaned.replace(/^\[\s*\{\s*"prompt":\s*"/i, '');
+    cleaned = cleaned.replace(/"\s*\}\s*\]$/i, '');
+    cleaned = cleaned.replace(/^\{\s*"prompt":\s*"/i, '');
+    cleaned = cleaned.replace(/"\s*\}$/i, '');
+    
+    return cleaned.trim();
+  }
 
   // Helper to convert File to Base64
   static fileToBase64(file) {
