@@ -526,21 +526,43 @@ const App = () => {
     localStorage.removeItem('miti_user');
   };
 
+  // Settings Persistence Logic
+  const savedSettings = JSON.parse(localStorage.getItem('gfx_metadata_settings') || '{}');
+
   // Settings
-  const [titleLen, setTitleLen] = useState([20, 200]);
-  const [descLen, setDescLen] = useState([100, 150]);
-  const [keywordCount, setKeywordCount] = useState([10, 50]);
-  const [isSingleKeyword, setIsSingleKeyword] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("meta-llama/llama-4-scout-17b-16e-instruct");
-  const [promptLen, setPromptLen] = useState([580, 620]);
+  const [titleLen, setTitleLen] = useState(savedSettings.titleLen || [20, 200]);
+  const [descLen, setDescLen] = useState(savedSettings.descLen || [100, 150]);
+  const [keywordCount, setKeywordCount] = useState(savedSettings.keywordCount || [10, 50]);
+  const [isSingleKeyword, setIsSingleKeyword] = useState(savedSettings.isSingleKeyword ?? false);
+  const [selectedModel, setSelectedModel] = useState(savedSettings.selectedModel || "meta-llama/llama-4-scout-17b-16e-instruct");
+  const [promptLen, setPromptLen] = useState(savedSettings.promptLen || [580, 620]);
   const [currentProgress, setCurrentProgress] = useState(0); 
   const [isDragging, setIsDragging] = useState(false);
 
   // Prefix & Suffix Settings
-  const [prefixEnabled, setPrefixEnabled] = useState(false);
-  const [prefixText, setPrefixText] = useState('');
-  const [suffixEnabled, setSuffixEnabled] = useState(false);
-  const [suffixText, setSuffixText] = useState('');
+  const [prefixEnabled, setPrefixEnabled] = useState(savedSettings.prefixEnabled ?? false);
+  const [prefixText, setPrefixText] = useState(savedSettings.prefixText || '');
+  const [suffixEnabled, setSuffixEnabled] = useState(savedSettings.suffixEnabled ?? false);
+  const [suffixText, setSuffixText] = useState(savedSettings.suffixText || '');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const saveSettings = () => {
+    setIsSaving(true);
+    const settings = {
+      titleLen,
+      descLen,
+      keywordCount,
+      isSingleKeyword,
+      selectedModel,
+      promptLen,
+      prefixEnabled,
+      prefixText,
+      suffixEnabled,
+      suffixText
+    };
+    localStorage.setItem('gfx_metadata_settings', JSON.stringify(settings));
+    setTimeout(() => setIsSaving(false), 2000);
+  };
 
   useEffect(() => {
     localStorage.setItem('dmatadata_keys_v2', JSON.stringify(apiKeys));
@@ -1253,6 +1275,31 @@ const App = () => {
                           )}
                       </div>
                   </div>
+
+                  <button 
+                    onClick={saveSettings}
+                    style={{
+                      width: '100%',
+                      background: isSaving ? '#2FEC00' : '#ffffff',
+                      color: '#000000',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '0.85rem',
+                      fontWeight: '700',
+                      fontSize: '0.9rem',
+                      marginTop: '2rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.75rem',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: isSaving ? '0 0 20px rgba(47, 236, 0, 0.4)' : '0 4px 12px rgba(0, 0, 0, 0.1)'
+                    }}
+                  >
+                    {isSaving ? <CheckCircle2 size={18} /> : <Settings size={18} />}
+                    {isSaving ? 'Settings Saved!' : 'Save Settings'}
+                  </button>
             </>
           ) : (
             <>
