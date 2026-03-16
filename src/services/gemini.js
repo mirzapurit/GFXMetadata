@@ -51,6 +51,7 @@ class GeminiService {
     const mimeType = base64Image.split(';')[0].split(':')[1] || 'image/jpeg';
 
     const prompt = `Analyze this image and provide metadata in JSON format with exactly three keys: "title", "description", and "keywords".
+${isPng ? '\nCRITICAL: This is a PNG image with a transparent background. DO NOT describe any background, settings, or environments. Focus ONLY on the main subject.' : ''}
 
 STRICT MANDATORY REQUIREMENTS:
 1. Title: MUST be exactly ONE SINGLE, grammatically complete sentence or descriptive phrase.

@@ -20,7 +20,7 @@ class GroqService {
   }
 
   async generateMetadata(base64Image, options) {
-    const { titleLen, descLen, keywordCount, isSingleKeyword, model = "meta-llama/llama-4-scout-17b-16e-instruct" } = options;
+    const { titleLen, descLen, keywordCount, isSingleKeyword, isPng, model = "meta-llama/llama-4-scout-17b-16e-instruct" } = options;
     
     // Retry logic for fallback
     let attempts = 0;
@@ -34,6 +34,7 @@ class GroqService {
         const groq = new Groq({ apiKey, dangerouslyAllowBrowser: true });
         
         const prompt = `Analyze this image and provide metadata in JSON format with exactly three keys: "title", "description", and "keywords".
+${isPng ? '\nCRITICAL: This is a PNG image with a transparent background. DO NOT describe any background, settings, or environments. Focus ONLY on the main subject.' : ''}
 
 STRICT MANDATORY REQUIREMENTS:
 1. Title: MUST be exactly ONE SINGLE, grammatically complete sentence or descriptive phrase.
