@@ -285,7 +285,7 @@ const ApiKeysModal = ({ isOpen, onClose, apiKeys, onAddKey, onRemoveKey, activeP
                     transition: 'all 0.2s'
                   }}
                 >
-                  <Terminal size={12} style={{ marginRight: '6px' }} /> Get {modalProvider === 'groq' ? 'Groq' : 'Gemini'} API Key
+                  Get {modalProvider === 'groq' ? 'Groq' : 'Gemini'} API Key
                 </a>
               </div>
 
