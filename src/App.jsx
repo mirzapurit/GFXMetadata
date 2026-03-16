@@ -220,14 +220,19 @@ const ApiKeysModal = ({ isOpen, onClose, apiKeys, onAddKey, onRemoveKey, activeP
                     }
                     </p>
                 </div>
-                {activeProvider !== modalProvider && (
-                    <button 
-                        onClick={() => setActiveProvider(modalProvider)}
-                        style={{ background: '#EC1C24', fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
-                    >
-                        Activate {modalProvider === 'groq' ? 'Groq' : 'Gemini'}
-                    </button>
-                )}
+                <button 
+                    onClick={() => setActiveProvider(modalProvider)}
+                    disabled={activeProvider === modalProvider}
+                    style={{ 
+                        background: activeProvider === modalProvider ? '#2FEC00' : '#EC1C24', 
+                        fontSize: '0.75rem', 
+                        padding: '0.4rem 0.75rem',
+                        cursor: activeProvider === modalProvider ? 'default' : 'pointer',
+                        opacity: 1
+                    }}
+                >
+                    {activeProvider === modalProvider ? `${modalProvider === 'groq' ? 'Groq' : 'Gemini'} Active` : `Activate ${modalProvider === 'groq' ? 'Groq' : 'Gemini'}`}
+                </button>
               </div>
 
               <div style={{ marginBottom: '2rem' }}>
