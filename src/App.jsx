@@ -442,52 +442,20 @@ const CustomSelect = ({ value, onChange, options }) => {
 
 const LiquidProgressBar = ({ progress }) => {
   const getProgressColor = () => {
-    if (progress <= 0) return '#EC1C24';
-    if (progress >= 100) return '#10b981';
-    
-    // Smooth HSL-like transition for more premium feel
-    if (progress < 50) {
-      const ratio = progress / 50;
-      const r = Math.round(236 * (1 - ratio) + 59 * ratio);
-      const g = Math.round(28 * (1 - ratio) + 130 * ratio);
-      const b = Math.round(36 * (1 - ratio) + 246 * ratio);
-      return `rgb(${r}, ${g}, ${b})`;
-    } else {
-      const ratio = (progress - 50) / 50;
-      const r = Math.round(59 * (1 - ratio) + 16 * ratio);
-      const g = Math.round(130 * (1 - ratio) + 185 * ratio);
-      const b = Math.round(246 * (1 - ratio) + 129 * ratio);
-      return `rgb(${r}, ${g}, ${b})`;
-    }
+    return progress >= 100 ? '#2FEC00' : '#EC1C24';
   };
 
   const color = getProgressColor();
 
   return (
     <div className="progress-container">
-      <div className="glass-shine" />
       <motion.div 
         className="liquid-progress-bar" 
         initial={{ width: 0 }}
         animate={{ width: `${progress}%` }}
         transition={{ type: 'spring', stiffness: 50, damping: 15 }}
-        style={{ color: color }}
-      >
-        <div className="liquid-fill" style={{ backgroundColor: color }} />
-        <AnimatePresence>
-          {progress > 0 && progress < 100 && (
-            <motion.div 
-              className="liquid-wave-wrapper"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-               <div className="liquid-wave" style={{ backgroundColor: color, filter: 'brightness(1.2)' }} />
-               <div className="liquid-wave" style={{ backgroundColor: color, filter: 'brightness(1.1)', animationDelay: '1s' }} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+        style={{ backgroundColor: color }}
+      />
       <div className="progress-text">{Math.round(progress)}%</div>
     </div>
   );
