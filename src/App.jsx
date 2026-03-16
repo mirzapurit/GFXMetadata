@@ -225,9 +225,11 @@ const ApiKeysModal = ({ isOpen, onClose, apiKeys, onAddKey, onRemoveKey, activeP
                     disabled={activeProvider === modalProvider}
                     style={{ 
                         background: activeProvider === modalProvider ? '#2FEC00' : '#EC1C24', 
+                        color: activeProvider === modalProvider ? '#000000' : '#ffffff',
                         fontSize: '0.75rem', 
                         padding: '0.4rem 0.75rem',
                         cursor: activeProvider === modalProvider ? 'default' : 'pointer',
+                        fontWeight: '700',
                         opacity: 1
                     }}
                 >
