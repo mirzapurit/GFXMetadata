@@ -551,6 +551,7 @@ const App = () => {
   const [prefixText, setPrefixText] = useState('');
   const [suffixEnabled, setSuffixEnabled] = useState(false);
   const [suffixText, setSuffixText] = useState('');
+  const [isTransparent, setIsTransparent] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('dmatadata_keys_v2', JSON.stringify(apiKeys));
@@ -651,6 +652,7 @@ const App = () => {
           let finalTitle = (result.title || '').trim().replace(/\.+$/, '');
           if (preText) finalTitle = `${preText} ${finalTitle}`.trim();
           if (sufText) finalTitle = `${finalTitle} ${sufText}`.trim();
+          if (isTransparent) finalTitle = `${finalTitle} isolated on transparent background`.trim();
 
           // Extreme Truncation if still too long
           if (finalTitle.length > titleLen[1]) {
@@ -680,6 +682,10 @@ const App = () => {
 
           // Enforce Keyword Count
           let finalKeywords = result.keywords || [];
+          if (isTransparent) {
+            const extraKeywords = ["isolated", "transparent", "background"];
+            finalKeywords = [...new Set([...finalKeywords, ...extraKeywords])];
+          }
           if (finalKeywords.length > keywordCount[1]) {
             finalKeywords = finalKeywords.slice(0, keywordCount[1]);
           }
@@ -771,6 +777,7 @@ const App = () => {
             let finalTitle = (result.title || '').trim().replace(/\.+$/, '');
             if (preText) finalTitle = `${preText} ${finalTitle}`.trim();
             if (sufText) finalTitle = `${finalTitle} ${sufText}`.trim();
+            if (isTransparent) finalTitle = `${finalTitle} isolated on transparent background`.trim();
 
             // Extreme Truncation if still too long
             if (finalTitle.length > titleLen[1]) {
@@ -798,6 +805,10 @@ const App = () => {
 
             // Enforce Keyword Count
             let finalKeywords = result.keywords || [];
+            if (isTransparent) {
+              const extraKeywords = ["isolated", "transparent", "background"];
+              finalKeywords = [...new Set([...finalKeywords, ...extraKeywords])];
+            }
             if (finalKeywords.length > keywordCount[1]) {
               finalKeywords = finalKeywords.slice(0, keywordCount[1]);
             }
@@ -1205,6 +1216,13 @@ const App = () => {
                   />
               </div>
                   
+                  <div className="control-item" style={{ marginTop: '1rem' }}>
+                      <div className="control-label">
+                          <span>Transparent Background</span>
+                          <Switch enabled={isTransparent} onChange={setIsTransparent} />
+                      </div>
+                  </div>
+
                   <div className="control-item" style={{ marginTop: '1rem' }}>
                       <div className="control-label">
                           <span>Single Keywords</span>
