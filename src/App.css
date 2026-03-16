@@ -707,9 +707,9 @@
 
 .badge-gemini,
 .badge-groq {
-  background: rgba(236, 28, 36, 0.15);
-  color: #EC1C24;
-  border: 1px solid rgba(236, 28, 36, 0.3);
+  background: rgba(47, 236, 0, 0.15);
+  color: #2FEC00;
+  border: 1px solid rgba(47, 236, 0, 0.3);
 }
 
 /* Google Login Button */
