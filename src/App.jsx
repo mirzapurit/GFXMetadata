@@ -681,6 +681,11 @@ const App = () => {
 
           // Enforce Keyword Count
           let finalKeywords = result.keywords || [];
+          if (isPng) {
+            // Prepend requested keywords, avoiding duplicates
+            const extraKeywords = ["transparent", "isolated"];
+            finalKeywords = [...new Set([...extraKeywords, ...finalKeywords])];
+          }
           if (finalKeywords.length > keywordCount[1]) {
             finalKeywords = finalKeywords.slice(0, keywordCount[1]);
           }
@@ -800,6 +805,11 @@ const App = () => {
 
             // Enforce Keyword Count
             let finalKeywords = result.keywords || [];
+            if (isPng) {
+              // Prepend requested keywords, avoiding duplicates
+              const extraKeywords = ["transparent", "isolated"];
+              finalKeywords = [...new Set([...extraKeywords, ...finalKeywords])];
+            }
             if (finalKeywords.length > keywordCount[1]) {
               finalKeywords = finalKeywords.slice(0, keywordCount[1]);
             }
