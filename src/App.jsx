@@ -224,13 +224,16 @@ const ApiKeysModal = ({ isOpen, onClose, apiKeys, onAddKey, onRemoveKey, activeP
                     onClick={() => setActiveProvider(modalProvider)}
                     disabled={activeProvider === modalProvider}
                     style={{ 
-                        background: activeProvider === modalProvider ? '#2FEC00' : '#EC1C24', 
-                        color: activeProvider === modalProvider ? '#000000' : '#ffffff',
+                        background: activeProvider === modalProvider ? '#2FEC00' : '#ffffff', 
+                        color: '#000000',
                         fontSize: '0.75rem', 
-                        padding: '0.4rem 0.75rem',
+                        padding: '0.42rem 0.85rem',
                         cursor: activeProvider === modalProvider ? 'default' : 'pointer',
                         fontWeight: '700',
-                        opacity: 1
+                        borderRadius: '8px',
+                        border: 'none',
+                        opacity: 1,
+                        transition: 'all 0.2s'
                     }}
                 >
                     {activeProvider === modalProvider ? `${modalProvider === 'groq' ? 'Groq' : 'Gemini'} Active` : `Activate ${modalProvider === 'groq' ? 'Groq' : 'Gemini'}`}
@@ -268,9 +271,21 @@ const ApiKeysModal = ({ isOpen, onClose, apiKeys, onAddKey, onRemoveKey, activeP
                   href={modalProvider === 'groq' ? "https://console.groq.com/keys" : "https://aistudio.google.com/app/apikey"}
                   target="_blank" 
                   rel="noopener noreferrer"
-                  style={{ fontSize: '0.75rem', color: '#EC1C24', textDecoration: 'none', display: 'inline-block', marginTop: '0.75rem' }}
+                  style={{ 
+                    fontSize: '0.75rem', 
+                    color: '#000000', 
+                    background: '#ffffff',
+                    textDecoration: 'none', 
+                    display: 'inline-flex', 
+                    alignItems: 'center',
+                    padding: '0.42rem 0.85rem',
+                    borderRadius: '8px',
+                    fontWeight: '700',
+                    marginTop: '0.75rem',
+                    transition: 'all 0.2s'
+                  }}
                 >
-                  <Terminal size={12} style={{ marginRight: '4px' }} /> Get {modalProvider === 'groq' ? 'Groq' : 'Gemini'} API Key
+                  <Terminal size={12} style={{ marginRight: '6px' }} /> Get {modalProvider === 'groq' ? 'Groq' : 'Gemini'} API Key
                 </a>
               </div>
 
